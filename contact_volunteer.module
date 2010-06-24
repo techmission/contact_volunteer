@@ -1,0 +1,90 @@
+<?php
+// $Id$
+
+/** 
+* Implementation of hook_help()
+*/
+function contact_volunteer_help($path, $arg) {
+	$output = '';
+	switch($path) {
+		case "admin/help#contact_volunteer":
+			$output = '<p>' . t("Provides a Contact this Volunteer link to be shown on user profiles") . '</p>';
+			break;
+	}
+	return $output;
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function contact_volunteer_menu() {
+  $items = array();
+  
+  $items['user/%/contact-volunteer'] = array(
+      'title' => 'Request Volunteer Assistance',
+      'page callback' => 'contact_volunteer',
+      'page arguments' => array(1),
+      'access arguments' => array('use Contact This Volunteer links'),
+      'type' => MENU_CALLBACK,
+    );
+	
+	return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function contact_volunteer_perm() {
+  return array('use Contact This Volunteer links');
+}
+
+/**
+ * Menu callback for user/%/contact-volunteer - 
+ * this function sends the email out to the user
+ */
+function contact_volunteer($uid) {
+ global $user;
+ $requester = $user; // the user requesting volunteer assistance
+ $volunteer = user_load($uid); // the potential volunteer
+ 
+ $params['requester'] = $requester;
+ $params['volunteer'] = $volunteer;
+ 
+ drupal_mail('contact_volunteer', 'request', $volunteer->mail, user_preferred_language($volunteer), $params, $requester->mail);
+ 
+ drupal_mail('contact_volunteer', 'confirm', $requester->mail, user_preferred_language($requester), $params);
+ 
+ drupal_set_message(t('!volunteer has been contacted', array('!volunteer' => $volunteer->name)));
+ 
+ watchdog('contact_volunteer', '%requester has contacted %volunteer', array('%requester' => $requester->name, '%volunteer' => $volunteer->name), WATCHDOG_NOTICE);
+ 
+ drupal_goto('user/' . $uid);
+}
+
+/**
+ * Implementation of hook_mail().
+ */
+function contact_volunteer_mail($key, &$message, $params) {
+$language = $message['language'];
+$requester_vars = user_mail_tokens($params['requester'], $language);
+$requester_vars['!volunteer'] = $params['volunteer']->name;
+
+$request_body = "
+Hi !volunteer ,
+
+!username has seen your volunteer profile on www.christianvolunteering.org and requested your help with a project. Please contact them via email at !mailto if you are interested in participating. Once you have replied, they will get back to you with further details.";
+
+$confirm_body = "!username, you have requested volunteer assistance from !volunteer. They have been notified, and will reply to you if they are interested.";
+
+	switch($key) {
+		case 'request':
+			$message['subject'] = t('!username has seen your volunteer profile and wants your help', $requester_vars, $language->language);
+			$message['body'] = t($request_body, $requester_vars, $language->language);
+			$message['headers']['bcc'] = "webmaster@urbanministry.org";
+		break;
+		case 'confirm':
+			$message['subject'] = t('You have requested volunteer help from !volunteer', $requester_vars, $language->language);
+			$message['body'] = t($confirm_body, $requester_vars, $language->language);
+		break;
+	}
+}

@@ -1,0 +1,5 @@
+<?php 
+// $Id$
+function contact_volunteer_install() {
+	drupal_set_message("The Contact this Volunteer module has been enabled. To use it, please add the link code to your theme.");
+}

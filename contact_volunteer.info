@@ -1,0 +1,6 @@
+; $Id$
+name = Contact this Volunteer
+description = Provides a Contact this Volunteer link to be shown on user profiles.
+package = Custom Modules
+core = 6.x
+version = 6.x-1.0
